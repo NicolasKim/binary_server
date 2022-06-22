@@ -144,7 +144,7 @@ async function create(ctx) {
         version: version,
         tag: tag,
         stable: stable,
-        download_url: util.format('/frameworks/%s/%s/%s/zip', name, version, tag)
+        download_url: util.format('/frameworks/download/%s/%s/%s/file.zip', name, version, tag)
     })
 
     ctx.body = JSON.stringify(data)
@@ -220,10 +220,102 @@ async function download(ctx) {
     ctx.set('Content-disposition', 'attachment; filename= '+path.basename(frameworkDir))
 }
 
+async function download_dsym(ctx) {
+    const name = ctx.params.name
+    const version = ctx.params.version
+    const tag = ctx.params.tag
+    let info = await components.dSYMInfo.findOne({
+        where: {name: name, version: version, tag: tag}
+    })
+
+    if (!info) {
+        ctx.status = 404
+        const status = new resp.ResponseStatus(404, util.format('无二进制文件 %s %s %s', name, version, tag))
+        const data = new resp.ResponseData(status, null)
+        ctx.body = JSON.stringify(data)
+        return
+    }
+
+    const dsymFilePath = dir.dSYMFile(name, version, tag, info.archive_file)
+    const dsymFile = await fsp.readFile(dsymFilePath)
+    if (!dsymFile) {
+        ctx.status = 404
+        const status = new resp.ResponseStatus(404, util.format('无二进制文件 %s %s %s', name, version, tag))
+        const data = new resp.ResponseData(status, null)
+        ctx.body = JSON.stringify(data)
+        return
+    }
+
+    ctx.type = path.extname(dsymFilePath)
+    ctx.body = fs.createReadStream(dsymFilePath)
+
+    ctx.set('Content-disposition', 'attachment; filename= '+path.basename(dsymFilePath))
+}
+
+async function upload_dsym(ctx) {
+
+    const name = ctx.request.body.fields.name
+    const version = ctx.request.body.fields.version
+    const tag = ctx.request.body.fields.tag
+    // let stable = false;
+    // if (tag === "release") {
+    //     stable = true
+    // }
+
+    const dSYMDir = dir.dSYMDir(name, version, tag)
+    if (!fs.existsSync(dSYMDir)) {
+        await dir.mkdirp(dSYMDir)
+    }
+
+    const file = ctx.request.body.files.file
+
+    let info = await components.dSYMInfo.findOne({
+        where: {name: name, version: version, tag: tag}
+    })
+    //设置contentType
+    ctx.type = 'application/json'
+
+    if (info) {
+        const status = new resp.ResponseStatus(500, util.format('dSYM已经存在 %s - %s - %s', name, version, tag))
+        const data = new resp.ResponseData(status, null)
+        ctx.body = JSON.stringify(data)
+        return
+    }
+
+    const filePath = path.join(dSYMDir, file.name)
+    const reader = fs.createReadStream(file.path)
+    const writer = fs.createWriteStream(filePath)
+    reader.pipe(writer)
+
+    try {
+        await components.dSYMInfo.create({name: name, tag: tag, version: version, archive_file: file.name, stable: true})
+    } catch (error) {
+        ctx.response.status = 500;
+        const status = new resp.ResponseStatus(error.code, error.message)
+        const data = new resp.ResponseData(status, null)
+        ctx.body = JSON.stringify(data)
+        return
+    }
+    const status = new resp.ResponseStatus(0, "保存成功")
+    const data = new resp.ResponseData(status, {
+        name: name,
+        version: version,
+        tag: tag,
+        stable: true,
+        download_url: util.format('/dsyms/download/%s/%s/%s/file.zip', name, version, tag)
+    })
+
+    ctx.body = JSON.stringify(data)
+    // ctx.body = util.format('保存成功 %s (%s)', name, version)
+}
+
+
 module.exports = {
     show,
     create,
     destroy,
     download,
-    exit
+    exit,
+    download_dsym,
+    upload_dsym
 }

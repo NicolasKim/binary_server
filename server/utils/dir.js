@@ -53,10 +53,29 @@ function frameworkDir(name, version, tag, archive_file) {
     return path.join(binaryDir(name, version, tag), archive_file)
 }
 
+//dsym
+function dSYMRoot() {
+    const rootDir = path.dirname(require.main.filename)
+    const dSYMRoot = path.join(rootDir, '.dsym')
+    return dSYMRoot
+}
+
+function dSYMDir(name, version, tag) {
+    return path.join(dSYMRoot(), name, version, tag)
+}
+
+function dSYMFile(name, version, tag, archive_file) {
+    return path.join(dSYMDir(name, version, tag), archive_file)
+}
+
+
 module.exports = {
     mkdirp,
     rmdir,
     binaryRoot,
     binaryDir,
-    frameworkDir
+    frameworkDir,
+    dSYMRoot,
+    dSYMDir,
+    dSYMFile
 }

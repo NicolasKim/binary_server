@@ -11,6 +11,8 @@ router
     .del('/frameworks/:name/:version/:tag', frameworks.destroy)
     .get('/frameworks/:name/:version/:tag/zip', frameworks.download)
     .get('/frameworks/download/:name/:version/:tag/file.zip', frameworks.download)
+    .get('/dsyms/download/:name/:version/:tag/file.zip', frameworks.download_dsym)
+    .post('/dsyms', frameworks.upload_dsym)
     .post('/frameworks', frameworks.create)
 
 module.exports = router

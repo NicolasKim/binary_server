@@ -4,6 +4,7 @@ const config = require('../../config').config.database
 const Sequelize = require('sequelize')
 const Model = Sequelize.Model;
 class BinaryInfo extends Model {}
+class dSYMInfo extends Model {}
 
 // Option 1: Passing parameters separately
 const sequelize = new Sequelize(config.name, config.username, config.password, {
@@ -53,6 +54,40 @@ BinaryInfo.init({
 });
 BinaryInfo.sync()
 
+dSYMInfo.init({
+    // attributes
+    name: {
+        type: Sequelize.STRING,
+        allowNull: false
+    },
+    tag: {
+        type: Sequelize.STRING,
+        allowNull: false
+    },
+    version: {
+        type: Sequelize.STRING,
+        allowNull: false
+    },
+    archive_file: {
+        type: Sequelize.STRING,
+        allowNull: false
+    },
+    stable: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    }
+}, {
+    sequelize,
+    modelName: 'dsym_info',
+    timestamps: true
+    // options
+});
+dSYMInfo.sync()
+
+
+
 module.exports = {
-    BinaryInfo
+    BinaryInfo,
+    dSYMInfo
 }
